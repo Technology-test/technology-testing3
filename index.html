@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ja" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情報の知識 一問一答クイズ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        function rgb(variable) {
+            return ({ opacityValue }) => {
+                if (opacityValue !== undefined) {
+                    return `rgb(var(${variable}) / ${opacityValue})`;
+                }
+                return `rgb(var(${variable}))`;
+            };
+        }
+    </script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+    <!-- ヘッダー -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-xl font-bold bg-gradient-to-r from-indigo-400 to-cyan-400 bg-clip-text text-transparent">
+                    情報の知識 一問一答クイズ
+                </h1>
+                <p class="text-xs text-slate-400 mt-0.5">共通テスト・定期テスト対策</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="mode-toggle-btn" onclick="toggleExamMode()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
+                    <span id="mode-icon">📝</span>
+                    <span id="mode-text">テストモード切替</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- メインコンテンツエリア -->
+    <main class="flex-1 max-w-4xl w-full mx-auto p-4 md:p-6 flex flex-col justify-center">
+
+        <!-- 設定・ステータスバー -->
+        <div class="mb-6 bg-slate-800/60 rounded-xl p-4 border border-slate-700/50 flex flex-wrap gap-4 items-center justify-between text-sm">
+            <div class="flex items-center gap-4">
+                <div>
+                    <span class="text-slate-400 text-xs block">進捗状況</span>
+                    <span id="progress-text" class="font-bold text-indigo-400">0 / 0</span>
+                </div>
+                <div class="h-8 w-px bg-slate-700"></div>
+                <div>
+                    <span class="text-slate-400 text-xs block">現在のスコア</span>
+                    <span id="score-text" class="font-bold text-emerald-400">0 点</span>
+                </div>
+            </div>
+
+            <!-- 単元フィルター -->
+            <div class="flex items-center gap-2">
+                <label for="category-select" class="text-xs text-slate-400">分野:</label>
+                <select id="category-select" onchange="filterQuestions()" class="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+                    <option value="all">すべての分野</option>
+                    <option value="情報社会の問題点">情報社会の問題点</option>
+                    <option value="情報デザイン">情報デザイン</option>
+                    <option value="デジタル化と表現">デジタル化と表現</option>
+                    <option value="ネットワークとセキュリティ">ネットワークとセキュリティ</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- クイズカード -->
+        <div id="quiz-card" class="bg-slate-800/90 rounded-2xl border border-slate-700/80 p-6 md:p-8 shadow-2xl relative overflow-hidden">
+            <!-- カテゴリバッジ -->
+            <div class="flex justify-between items-center mb-4">
+                <span id="question-category" class="text-xs font-semibold px-2.5 py-1 rounded-md bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    分野名
+                </span>
+                <span id="question-number" class="text-xs text-slate-500 font-mono">
+                    Q.1
+                </span>
+            </div>
+
+            <!-- 問題文 -->
+            <h2 id="question-text" class="text-lg md:text-xl font-medium text-slate-100 mb-6 leading-relaxed">
+                問題文がここに表示されます。
+            </h2>
+
+            <!-- 選択肢ボタンエリア -->
+            <div id="options-container" class="grid grid-cols-1 gap-3 mb-6">
+                <!-- 動的に生成 -->
+            </div>
+
+            <!-- フィードバック表示エリア（通常モード用） -->
+            <div id="feedback-area" class="hidden p-4 rounded-xl border mb-4 transition-all">
+                <div class="flex items-center gap-2 font-bold mb-1" id="feedback-result"></div>
+                <p class="text-sm text-slate-300" id="feedback-explanation"></p>
+            </div>
+
+            <!-- 次へボタン -->
+            <button id="next-btn" onclick="nextQuestion()" class="hidden w-full py-3 bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-600/20">
+                次の問題へ ➔
+            </button>
+        </div>
+
+        <!-- テストモード結果カード (初期非表示) -->
+        <div id="result-card" class="hidden bg-slate-800/90 rounded-2xl border border-slate-700/80 p-6 md:p-8 shadow-2xl text-center">
+            <h2 class="text-2xl font-bold text-white mb-2">テスト終了！お疲れ様でした！</h2>
+            <p class="text-slate-400 text-sm mb-6">あなたの学習結果です。</p>
+
+            <div class="bg-slate-900/50 rounded-xl p-6 border border-slate-700/50 max-w-sm mx-auto mb-6">
+                <span class="text-xs text-slate-400 block mb-1">最終スコア</span>
+                <div class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400" id="final-score">
+                    0 / 0
+                </div>
+                <div class="text-sm font-semibold text-slate-300 mt-2" id="score-percentage">正答率: 0%</div>
+            </div>
+
+            <div id="encouragement-message" class="p-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-300 text-sm mb-6">
+                応援メッセージがここに表示されます。
+            </div>
+
+            <button onclick="restartQuiz()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition shadow-lg shadow-indigo-600/30">
+                もう一度挑戦する 🔄
+            </button>
+        </div>
+
+    </main>
+
+    <!-- フッター -->
+    <footer class="border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+        情報の知識 一問一答クイズ App
+    </footer>
+
+    <!-- スクリプト部 -->
+    <script>
+        // クイズデータ
+        const allQuestions = [
+            {
+                id: 1,
+                category: "情報社会の問題点",
+                question: "インターネット上で、事実とは異なる虚偽の情報が拡散される現象を何と呼ぶか？",
+                options: ["フェイクニュース", "ディープフェイク", "フィッシング", "スピアフィッシング"],
+                answer: 0,
+                explanation: "意図的または誤解によって広まる誤った情報をフェイクニュースと呼びます。情報の真偽を見極めるメディアリテラシーが重要です。"
+            },
+            {
+                id: 2,
+                category: "情報デザイン",
+                question: "誰にとっても利用しやすいように製品や環境を設計する考え方を何と呼ぶか？",
+                options: ["ユニバーサルデザイン", "バリアフリー", "Webアクセシビリティ", "ユーザーエクスペリエンス"],
+                answer: 0,
+                explanation: "ユニバーサルデザインは、障害の有無や年齢・性別に関わらず最初からすべての人にとって使いやすくデザインする考え方です。"
+            },
+            {
+                id: 3,
+                category: "デジタル化と表現",
+                question: "アナログ信号をデジタル信号に変換する際、一定の時間間隔で信号の値を読み取る処理を何と呼ぶか？",
+                options: ["標本化（サンプリング）", "量子化", "符号化", "圧縮"],
+                answer: 0,
+                explanation: "デジタル化の3ステップは、①標本化（時間を区切る）➔ ②量子化（数値を近似する）➔ ③符号化（0と1の二進数にする）です。"
+            },
+            {
+                id: 4,
+                category: "ネットワークとセキュリティ",
+                question: "悪意のあるWebサイトに誘導し、暗証番号やクレジットカード番号などを盗み出す詐欺の手法を何と呼ぶか？",
+                options: ["フィッシング", "マルウェア", "ランサムウェア", "DoS攻撃"],
+                answer: 0,
+                explanation: "実在の企業等を装ったメールから偽サイトに誘導し情報を盗み出す手法をフィッシング詐欺と呼びます。"
+            }
+        ];
+
+        let currentQuestions = [...allQuestions];
+        let currentIndex = 0;
+        let score = 0;
+        let isExamMode = false;
+        let userAnswers = [];
+
+        // 初期化
+        function initQuiz() {
+            currentIndex = 0;
+            score = 0;
+            userAnswers = [];
+            document.getElementById("quiz-card").classList.remove("hidden");
+            document.getElementById("result-card").classList.add("hidden");
+            updateStatus();
+            showQuestion();
+        }
+
+        // フィルタリング
+        function filterQuestions() {
+            const selected = document.getElementById("category-select").value;
+            if (selected === "all") {
+                currentQuestions = [...allQuestions];
+            } else {
+                currentQuestions = allQuestions.filter(q => q.category === selected);
+            }
+            initQuiz();
+        }
+
+        // テストモード切替
+        function toggleExamMode() {
+            isExamMode = !isExamMode;
+            const btnText = document.getElementById("mode-text");
+            const btnIcon = document.getElementById("mode-icon");
+            if (isExamMode) {
+                btnText.textContent = "通常モードに戻す";
+                btnIcon.textContent = "📖";
+                alert("テストモードに切り替えました。すべての問題に回答後、最終スコアと採点結果が表示されます。");
+            } else {
+                btnText.textContent = "テストモード切替";
+                btnIcon.textContent = "📝";
+                alert("通常モードに切り替えました。1問ごとに正解・解説が表示されます。");
+            }
+            initQuiz();
+        }
+
+        // 問題表示
+        function showQuestion() {
+            if (currentIndex >= currentQuestions.length) {
+                if (isExamMode) {
+                    showFinalResult();
+                } else {
+                    showFinalResult();
+                }
+                return;
+            }
+
+            const q = currentQuestions[currentIndex];
+            document.getElementById("question-category").textContent = q.category;
+            document.getElementById("question-number").textContent = `Q.${currentIndex + 1} / ${currentQuestions.length}`;
+            document.getElementById("question-text").textContent = q.question;
+
+            const container = document.getElementById("options-container");
+            container.innerHTML = "";
+
+            document.getElementById("feedback-area").classList.add("hidden");
+            document.getElementById("next-btn").classList.add("hidden");
+
+            q.options.forEach((opt, idx) => {
+                const btn = document.createElement("button");
+                btn.className = "w-full text-left p-4 rounded-xl bg-slate-700/50 hover:bg-slate-700 border border-slate-600/50 text-slate-200 transition font-medium flex items-center justify-between group";
+                btn.innerHTML = `
+                    <span>${idx + 1}. ${opt}</span>
+                    <span class="opacity-0 group-hover:opacity-100 transition text-indigo-400">選択 ➔</span>
+                `;
+                btn.onclick = () => selectOption(idx);
+                container.appendChild(btn);
+            });
+
+            updateStatus();
+        }
+
+        // 選択肢クリック時
+        function selectOption(index) {
+            const q = currentQuestions[currentIndex];
+            const isCorrect = (index === q.answer);
+
+            if (isCorrect) score++;
+            userAnswers.push({ question: q, selected: index, correct: isCorrect });
+
+            const buttons = document.getElementById("options-container").children;
+            for (let btn of buttons) {
+                btn.disabled = true;
+                btn.classList.add("opacity-50", "cursor-not-allowed");
+            }
+
+            if (isExamMode) {
+                // テストモード時は解説を出さずそのまま次へ
+                currentIndex++;
+                showQuestion();
+            } else {
+                // 通常モード時は即時解説表示
+                const feedbackArea = document.getElementById("feedback-area");
+                const feedbackResult = document.getElementById("feedback-result");
+                const feedbackExp = document.getElementById("feedback-explanation");
+
+                feedbackArea.classList.remove("hidden");
+                if (isCorrect) {
+                    feedbackArea.className = "p-4 rounded-xl border mb-4 bg-emerald-500/10 border-emerald-500/30 text-emerald-300";
+                    feedbackResult.innerHTML = "✨ 正解！素晴らしい理解度です！";
+                } else {
+                    feedbackArea.className = "p-4 rounded-xl border mb-4 bg-rose-500/10 border-rose-500/30 text-rose-300";
+                    feedbackResult.innerHTML = `❌ おしい！ 正解は 「${q.options[q.answer]}」 です。`;
+                }
+                feedbackExp.textContent = q.explanation;
+                document.getElementById("next-btn").classList.remove("hidden");
+            }
+        }
+
+        // 次へ進む
+        function nextQuestion() {
+            currentIndex++;
+            showQuestion();
+        }
+
+        // スタッツ更新
+        function updateStatus() {
+            document.getElementById("progress-text").textContent = `${currentIndex} / ${currentQuestions.length}`;
+            document.getElementById("score-text").textContent = `${score} 点`;
+        }
+
+        // 最終結果表示
+        function showFinalResult() {
+            document.getElementById("quiz-card").classList.add("hidden");
+            document.getElementById("result-card").classList.remove("hidden");
+
+            const total = currentQuestions.length;
+            const pct = Math.round((score / total) * 100) || 0;
+
+            document.getElementById("final-score").textContent = `${score} / ${total}`;
+            document.getElementById("score-percentage").textContent = `正答率: ${pct}%`;
+
+            const msgEl = document.getElementById("encouragement-message");
+            if (pct === 100) {
+                msgEl.textContent = "🌟 完璧です！この分野の基礎知識はバッチリ定着しています。自信を持って本番に臨みましょう！";
+            } else if (pct >= 70) {
+                msgEl.textContent = "👍 素晴らしい成績です！間違えた問題を少し見直すだけで、さらに完成度が高まります！";
+            } else if (pct >= 40) {
+                msgEl.textContent = "💪 ナイスファイト！基本用語を中心に復習し、もう一度チャレンジしてみましょう！";
+            } else {
+                msgEl.textContent = "📘 ここからが伸びしろです！テキストや解説をじっくり確認して、着実にステップアップしていきましょう！";
+            }
+        }
+
+        // リスタート
+        function restartQuiz() {
+            initQuiz();
+        }
+
+        // 起動時実行
+        window.onload = initQuiz;
+    </script>
+</body>
+</html>
